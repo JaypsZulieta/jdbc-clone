@@ -1,6 +1,5 @@
 import { z as Zod } from "zod";
-import MySQL from "mysql2";
-import { Connection } from "mysql2/typings/mysql/lib/Connection";
+import MySQL, { Pool } from "mysql2/promise";
 
 export abstract class SQLException extends Error {
   public constructor(message: string) {
@@ -11,18 +10,6 @@ export abstract class SQLException extends Error {
 export class DataValidationSQLException extends SQLException {
   public constructor(message: string) {
     super(message);
-  }
-}
-
-export class DataSource {
-  private databaseURL: string;
-
-  public constructor(databaseURL: string) {
-    this.databaseURL = databaseURL;
-  }
-
-  public getDatabaseURL(): string {
-    return this.databaseURL;
   }
 }
 
@@ -77,46 +64,175 @@ class Result {
 }
 
 export interface Statement {
-  execute(): Promise<Result[]>;
+  execute(): Promise<void>;
+  executeQuery(): Promise<Result[]>;
 }
 
 export interface PreparedStatement extends Statement {
-  setString(position: number, data: string): Promise<PreparedStatement>;
-  setNumber(position: number, data: number): Promise<PreparedStatement>;
-  setBoolean(position: number, data: boolean): Promise<PreparedStatement>;
+  setString(position: number, data: string): PreparedStatement;
+  setNumber(position: number, data: number): PreparedStatement;
+  setBoolean(position: number, data: boolean): PreparedStatement;
 }
 
 export interface DatabaseConnection {
-  createStatemet(query: string): Promise<Statement>;
-  prepareStatement(query: string): Promise<PreparedStatement>;
+  createStatement(query: string): Statement;
+  prepareStatement(query: string): PreparedStatement;
 }
 
-class MySQLStatment implements Statement {
-  private sql: string;
-  private connection: Connection;
+class DataSource {
+  private host: string;
+  private username: string;
+  private password: string;
+  private databaseName: string;
 
-  constructor(sql: string, connection: Connection) {
-    this.sql = sql;
-    this.connection = connection;
+  constructor(
+    host: string,
+    username: string,
+    password: string,
+    database: string
+  ) {
+    this.host = host;
+    this.username = username;
+    this.password = password;
+    this.databaseName = database;
   }
 
-  public async execute(): Promise<Result[]> {
-    throw Error();
+  public getHost(): string {
+    return this.host;
+  }
+
+  public getUsername(): string {
+    return this.username;
+  }
+
+  public getPassword(): string {
+    return this.password;
+  }
+
+  public getDatabaseName(): string {
+    return this.databaseName;
+  }
+}
+
+export class DataSourceBuilder {
+  private hostToSet: string;
+  private usernameToSet: string;
+  private passwordToSet: string;
+  private databaseNameToSet: string;
+
+  constructor() {
+    this.hostToSet = "localhost";
+    this.usernameToSet = "root";
+    this.passwordToSet = "";
+    this.databaseNameToSet = "database";
+  }
+
+  public host(host: string): DataSourceBuilder {
+    this.hostToSet = host;
+    return this;
+  }
+
+  public username(username: string): DataSourceBuilder {
+    this.usernameToSet = username;
+    return this;
+  }
+
+  public password(password: string): DataSourceBuilder {
+    this.passwordToSet = password;
+    return this;
+  }
+
+  public databaseName(databaseName: string): DataSourceBuilder {
+    this.databaseNameToSet = databaseName;
+    return this;
+  }
+
+  public build(): DataSource {
+    return new DataSource(
+      this.hostToSet,
+      this.usernameToSet,
+      this.passwordToSet,
+      this.databaseNameToSet
+    );
+  }
+}
+
+export class MySQLStatement implements Statement {
+  private connectionPool: Pool;
+  private sqlQuery: string;
+
+  constructor(connectionPool: Pool, sqlQuery: string) {
+    this.connectionPool = connectionPool;
+    this.sqlQuery = sqlQuery;
+  }
+
+  public async execute(): Promise<void> {
+    await this.connectionPool.query(this.sqlQuery);
+  }
+
+  public async executeQuery(): Promise<Result[]> {
+    const [results] = await this.connectionPool.query(this.sqlQuery);
+    const data = results as any[];
+    return data.map((data) => new Result(data));
+  }
+}
+
+class MySQLPreparedStatement implements PreparedStatement {
+  private sqlQuery: string;
+  private parameters: any[];
+  private connectionPool: Pool;
+
+  constructor(connectionPool: Pool, sqlQuery: string) {
+    this.connectionPool = connectionPool;
+    this.sqlQuery = sqlQuery;
+    this.parameters = [];
+  }
+
+  public setString(position: number, data: string): PreparedStatement {
+    this.parameters[position - 1] = data;
+    return this;
+  }
+
+  public setNumber(position: number, data: number): PreparedStatement {
+    this.parameters[position - 1] = data;
+    return this;
+  }
+
+  public setBoolean(position: number, data: boolean): PreparedStatement {
+    this.parameters[position - 1] = data;
+    return this;
+  }
+
+  public async executeQuery(): Promise<Result[]> {
+    const [results] = await this.connectionPool.query(
+      this.sqlQuery,
+      this.parameters
+    );
+    const data = results as any[];
+    return data.map((data) => new Result(data));
+  }
+
+  public async execute(): Promise<void> {
+    await this.connectionPool.query(this.sqlQuery, this.parameters);
   }
 }
 
 export class MySQLDatabaseConnection implements DatabaseConnection {
-  private connection: Connection;
+  private connectionPool: Pool;
 
-  constructor(dataSource: DataSource) {
-    this.connection = MySQL.createConnection(dataSource.getDatabaseURL());
+  public constructor(dataSource: DataSource) {
+    this.connectionPool = MySQL.createPool({
+      user: dataSource.getUsername(),
+      password: dataSource.getPassword(),
+      host: dataSource.getHost(),
+      database: dataSource.getDatabaseName(),
+    });
   }
 
-  public async createStatemet(query: string): Promise<Statement> {
-    throw new Error("Method not implemented.");
+  public createStatement(query: string): Statement {
+    return new MySQLStatement(this.connectionPool, query);
   }
-
-  public async prepareStatement(query: string): Promise<PreparedStatement> {
-    throw new Error("Method not implemented.");
+  public prepareStatement(query: string): PreparedStatement {
+    return new MySQLPreparedStatement(this.connectionPool, query);
   }
 }
