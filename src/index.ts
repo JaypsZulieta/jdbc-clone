@@ -157,7 +157,7 @@ export class DataSourceBuilder {
   }
 }
 
-export class MySQLStatement implements Statement {
+class MySQLStatement implements Statement {
   private connectionPool: Pool;
   private sqlQuery: string;
 
@@ -232,6 +232,7 @@ export class MySQLDatabaseConnection implements DatabaseConnection {
   public createStatement(query: string): Statement {
     return new MySQLStatement(this.connectionPool, query);
   }
+
   public prepareStatement(query: string): PreparedStatement {
     return new MySQLPreparedStatement(this.connectionPool, query);
   }
