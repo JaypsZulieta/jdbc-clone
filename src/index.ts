@@ -7,6 +7,12 @@ export abstract class SQLException extends Error {
   }
 }
 
+export class SQLSyntaxException extends SQLException {
+  constructor(message: string) {
+    super(message);
+  }
+}
+
 export class DataValidationSQLException extends SQLException {
   public constructor(message: string) {
     super(message);
@@ -77,6 +83,7 @@ export interface PreparedStatement extends Statement {
 export interface DatabaseConnection {
   createStatement(query: string): Statement;
   prepareStatement(query: string): PreparedStatement;
+  close(): Promise<void>;
 }
 
 class DataSource {
@@ -204,12 +211,18 @@ class MySQLPreparedStatement implements PreparedStatement {
   }
 
   public async executeQuery(): Promise<Result[]> {
-    const [results] = await this.connectionPool.query(
-      this.sqlQuery,
-      this.parameters
-    );
-    const data = results as any[];
-    return data.map((data) => new Result(data));
+    try {
+      const [results] = await this.connectionPool.query(
+        this.sqlQuery,
+        this.parameters
+      );
+      const data = results as any[];
+      return data.map((data) => new Result(data));
+    } catch (error) {
+      if (error instanceof TypeError) return [];
+      const message = (error as any).sqlMessage as string;
+      throw new SQLSyntaxException(message);
+    }
   }
 
   public async execute(): Promise<void> {
@@ -236,4 +249,10 @@ export class MySQLDatabaseConnection implements DatabaseConnection {
   public prepareStatement(query: string): PreparedStatement {
     return new MySQLPreparedStatement(this.connectionPool, query);
   }
+
+  public async close(): Promise<void> {
+    await this.connectionPool.end();
+  }
 }
+
+export { type Result, type DataSource };
