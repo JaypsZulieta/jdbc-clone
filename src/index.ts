@@ -30,7 +30,8 @@ class Result {
     const data = this.data[columnName];
     const columnDoesNotExistMessage = `'${columnName}' does not exist in result.`;
     const dataIsNotAStringMessage = `'${columnName}' is not a string.`;
-    if (!data) throw new DataValidationSQLException(columnDoesNotExistMessage);
+    if (data == undefined)
+      throw new DataValidationSQLException(columnDoesNotExistMessage);
     if (await this.isNotAString(data))
       throw new DataValidationSQLException(dataIsNotAStringMessage);
     return data as string;
@@ -40,7 +41,8 @@ class Result {
     const data = this.data[columnName];
     const columnDoesNotExistMessage = `'${columnName}' does not exist in result.`;
     const dataIsNotANumberMessage = `'${columnName}' is not a number.`;
-    if (!data) throw new DataValidationSQLException(columnDoesNotExistMessage);
+    if (data == undefined)
+      throw new DataValidationSQLException(columnDoesNotExistMessage);
     if (await this.isNotANumber(data))
       throw new DataValidationSQLException(dataIsNotANumberMessage);
     return data as number;
@@ -50,7 +52,8 @@ class Result {
     const data = this.data[columnName];
     const columnDoesNotExistMessage = `'${columnName}' does not exist in result.`;
     const dataIsNotABooleanMessage = `${columnName} is not a boolean.`;
-    if (!data) throw new DataValidationSQLException(columnDoesNotExistMessage);
+    if (data == undefined)
+      throw new DataValidationSQLException(columnDoesNotExistMessage);
     if (await this.isNotABoolean(data))
       throw new DataValidationSQLException(dataIsNotABooleanMessage);
     return data as boolean;
