@@ -69,9 +69,11 @@ class Result {
   }
 }
 
+class ResultSet extends Array<Result> {}
+
 export interface Statement {
   execute(): Promise<void>;
-  executeQuery(): Promise<Result[]>;
+  executeQuery(): Promise<ResultSet>;
 }
 
 export interface PreparedStatement extends Statement {
@@ -177,7 +179,7 @@ class MySQLStatement implements Statement {
     await this.connectionPool.query(this.sqlQuery);
   }
 
-  public async executeQuery(): Promise<Result[]> {
+  public async executeQuery(): Promise<ResultSet> {
     const [results] = await this.connectionPool.query(this.sqlQuery);
     const data = results as any[];
     return data.map((data) => new Result(data));
@@ -210,7 +212,7 @@ class MySQLPreparedStatement implements PreparedStatement {
     return this;
   }
 
-  public async executeQuery(): Promise<Result[]> {
+  public async executeQuery(): Promise<ResultSet> {
     try {
       const [results] = await this.connectionPool.query(
         this.sqlQuery,
@@ -255,4 +257,4 @@ export class MySQLDatabaseConnection implements DatabaseConnection {
   }
 }
 
-export { type Result, type DataSource };
+export { type Result, type DataSource, type ResultSet };
