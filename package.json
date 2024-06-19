@@ -1,6 +1,6 @@
 {
   "name": "jdbc-clone",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "This library provides a simple database access layer that mimics the API of JDBC from Java. It is designed to work with MySQL databases using the `mysql2/promise` library and includes support for query execution, prepared statements, and data validation.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
