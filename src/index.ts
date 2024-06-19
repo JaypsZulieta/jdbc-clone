@@ -54,8 +54,14 @@ class Result {
     const dataIsNotABooleanMessage = `${columnName} is not a boolean.`;
     if (data == undefined)
       throw new DataValidationSQLException(columnDoesNotExistMessage);
-    if (await this.isNotABoolean(data))
+    if ((await this.isNotABoolean(data)) && (await this.isNotANumber(data)))
       throw new DataValidationSQLException(dataIsNotABooleanMessage);
+    if (!(await this.isNotANumber(data))) {
+      const booleanAsNumber = data as number;
+      if (booleanAsNumber == 1) return true;
+      else if (booleanAsNumber == 0) return false;
+      else throw new DataValidationSQLException(dataIsNotABooleanMessage);
+    }
     return data as boolean;
   }
 
@@ -64,11 +70,11 @@ class Result {
   }
 
   private async isNotANumber(data: any): Promise<boolean> {
-    return !(await Zod.string().safeParseAsync(data)).success;
+    return !(await Zod.number().safeParseAsync(data)).success;
   }
 
   private async isNotABoolean(data: any): Promise<boolean> {
-    return !(await Zod.string().safeParseAsync(data)).success;
+    return !(await Zod.boolean().safeParseAsync(data)).success;
   }
 }
 
