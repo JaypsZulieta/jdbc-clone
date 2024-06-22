@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "start": "tsx src/index.ts",
-    "test": "jest",
+    "test": "jest --verbose",
     "start:dev": "tsx watch src/index.ts",
     "build": "tsup"
   },
