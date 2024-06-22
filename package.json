@@ -10,6 +10,7 @@
   ],
   "scripts": {
     "start": "tsx src/index.ts",
+    "test": "jest",
     "start:dev": "tsx watch src/index.ts",
     "build": "tsup"
   },
