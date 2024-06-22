@@ -10,13 +10,13 @@ export class InsertId {
 
   public async getAsString(): Promise<string> {
     if (await this.isNotAString(this.insertId))
-      throw new DataValidationSQLException("The insert id is not a string.");
+      throw new DataValidationSQLException("The Insert-id is not a string.");
     return this.insertId as string;
   }
 
   public async getAsNumber(): Promise<number> {
     if (await this.isNotANumber(this.insertId))
-      throw new DataValidationSQLException("The insert id is not a number");
+      throw new DataValidationSQLException("The Insert-id is not a number.");
     return this.insertId as number;
   }
 
